@@ -1,0 +1,79 @@
+﻿@page "/"
+@using System.IO
+@using BlazorInputFile;
+@using Spire.Pdf
+@using Microsoft.JSInterop
+@using System.Drawing.Imaging;
+@using PDFImageExtractor.Services;
+@using System.Drawing;
+@inject PDFImageExtractor.Services.PdfImageExtractorService ExtractImagesFromPdf;
+
+<h3>Image Extractor from PDF</h3>
+
+<BlazorInputFile.InputFile OnChange="HandleFileUpload" />
+
+@if (foundImages != null)
+{
+    <h4>Extracted Images:</h4>
+    <div class="images">
+        @foreach (var image in foundImages)
+        {
+            <div class="imageContainer">
+                <img src="@ConvertBitmapToBase64(image)" alt="Image" />
+            </div>
+        }
+    </div>
+}
+
+<style>
+    .images {
+        display: flex;
+        flex-wrap: wrap;
+    }
+    .imageContainer {
+        width: 33.33333%;
+        padding: 15px;
+    }
+    .imageContainer img {
+        width: 100%;
+    }
+</style>
+
+@code {
+    private List<Image> foundImages = new List<Image>();
+
+    private async Task HandleFileUpload(IFileListEntry[] files)
+    {
+        var selectedFile = files.FirstOrDefault();
+
+        if (selectedFile != null && selectedFile.Type == "application/pdf")
+        {
+            using (var stream = new MemoryStream())
+            {
+                await selectedFile.Data.CopyToAsync(stream);
+
+                stream.Position = 0;
+
+                var images = PdfImageExtractorService.ExtractImagesFromPdf(stream);
+
+                foundImages.Clear();
+                foundImages.AddRange(images);
+            }
+        }
+        else
+        {
+        }
+    }
+
+    private string ConvertBitmapToBase64(System.Drawing.Image bitmap)
+    {
+        using (MemoryStream stream = new MemoryStream())
+        {
+            bitmap.Save(stream, ImageFormat.Jpeg);
+            byte[] imageBytes = stream.ToArray();
+            return $"data:image/jpeg;base64,{Convert.ToBase64String(imageBytes)}";
+        }
+    }
+
+}
+
